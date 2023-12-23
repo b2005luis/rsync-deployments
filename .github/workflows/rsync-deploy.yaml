@@ -1,0 +1,47 @@
+name: Rsync Deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+      - release*
+  push:
+    branches:
+      - feat*
+      - hotfix*
+      - bugfix*
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      SERVER: ${{ secrets.HOSTGATOR_SERVER }}
+      PORT: 22
+      USER: ${{ secrets.HOSTGATOR_USER }}
+      SOURCE: dist/
+      TARGET: ${{ secrets.HOSTGATOR_PATH }}
+      LOCAL_KEY: .ssh/id_rsa
+      SSH_PRIVATE_KEY: ${{ secrets.HOSTGATOR_PRIVATE_KEY }}
+      SWITCHES: -avzr --update --delete
+
+    steps:
+      - name: Checkout do Repositorio
+        uses: actions/checkout@v3
+
+      - name: Copiar arquivos
+        run: |
+          mkdir -p dist
+          echo "Teste!" > dist/teste.txt
+          chmod 755 dist/teste.txt
+
+      - name: Setup do SSH
+        run: |
+          eval "$(ssh-agent -s)"
+          mkdir -p .ssh
+          echo "$SSH_PRIVATE_KEY" > $LOCAL_KEY
+          chmod 600 $LOCAL_KEY
+
+      - name: Deploy com Rsync
+        run: |
+          rsync -e "ssh -i $LOCAL_KEY -o StrictHostKeyChecking=no" $SWITCHES $SOURCE $USER@$SERVER:$TARGET
